@@ -1099,6 +1099,7 @@ Buzzer ON
 ## **Conclusion**
 This project successfully implements a **WiFi-synced clock with an OLED display and scheduled LED/Buzzer activation**. The system can be further expanded to include **alarm notifications, IoT integration, or a mobile app**.
 
+
 # 11. ESP32-S3 Telegram Bot for Home Automation
 
 ## **Objective**
@@ -1370,4 +1371,122 @@ void loop() {
 - Home automation with integrated AI
 
 **8. Conclusion**
+
 The ESP32-S3-based Spy Rover successfully integrates live video streaming and remote control functionalities. Future improvements can include obstacle detection, AI-based motion tracking, and extended battery life optimization.
+
+# 13. Edge Impulse Implementation on ESP32-S3 with Camera
+
+### **1. Introduction**
+This report details the implementation of an image classification model on the ESP32-S3 microcontroller using Edge Impulse. The model is trained to distinguish between images of bottles and phones using a custom-trained deep learning model. The ESP32-S3 captures images using an onboard camera, processes them, and classifies them using an Edge Impulse-deployed model.
+
+### **2. Hardware Used**
+- ESP32-S3 microcontroller
+- OV2640 Camera Module
+- Power Supply (5V)
+- Edge Impulse Arduino Library
+
+### **3. Model Training using Edge Impulse**
+The model was trained using Edge Impulse with images collected from a phone camera. The dataset consists of images of bottles and phones.
+
+#### **3.1 Model Performance**
+- **Model Accuracy:** 92.5%
+- **Loss:** 0.16
+- **Confusion Matrix:**
+  | Object | Bottle | Phone |
+  |--------|--------|--------|
+  | **Bottle** | 93.0% | 7.0% |
+  | **Phone**  | 8.1% | 91.9% |
+- **F1 Score:** 0.93 (bottle), 0.92 (phone)
+
+### **4. Deployment on ESP32-S3**
+The trained model was deployed as an Arduino library optimized for Edge Impulse's TensorFlow Lite framework. The deployment optimizations include:
+- **Model Format:** TensorFlow Lite (Quantized INT8)
+- **Latency:** 1.611 ms
+- **RAM Usage:** 4.0 KB
+- **Flash Usage:** 353.1 KB
+
+### **5. Implementation Code**
+The ESP32-S3 was programmed using the Arduino framework, and the deployed Edge Impulse model was integrated. The camera module was configured to capture images, which were then processed and classified.
+
+#### **5.1 Camera Configuration**
+```cpp
+#define CAMERA_MODEL_XIAO_ESP32S3
+#define PWDN_GPIO_NUM     -1
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM     10
+#define SIOD_GPIO_NUM     40
+#define SIOC_GPIO_NUM     39
+...
+static camera_config_t camera_config = {
+    .pin_pwdn = PWDN_GPIO_NUM,
+    .pin_reset = RESET_GPIO_NUM,
+    .pin_xclk = XCLK_GPIO_NUM,
+    .pin_sscb_sda = SIOD_GPIO_NUM,
+    .pin_sscb_scl = SIOC_GPIO_NUM,
+    .pin_d7 = 48,
+    .pin_d6 = 11,
+    .pin_d5 = 12,
+    .pin_d4 = 14,
+    .pin_d3 = 16,
+    .pin_d2 = 18,
+    .pin_d1 = 17,
+    .pin_d0 = 15,
+    .pin_vsync = 38,
+    .pin_href = 47,
+    .pin_pclk = 13,
+    .xclk_freq_hz = 20000000,
+    .pixel_format = PIXFORMAT_JPEG,
+    .frame_size = FRAMESIZE_QVGA,
+    .jpeg_quality = 12,
+    .fb_count = 1,
+    .fb_location = CAMERA_FB_IN_PSRAM,
+};
+```
+
+#### **5.2 Image Capture and Classification**
+```cpp
+void loop() {
+    snapshot_buf = (uint8_t*)malloc(EI_CAMERA_RAW_FRAME_BUFFER_COLS * EI_CAMERA_RAW_FRAME_BUFFER_ROWS * EI_CAMERA_FRAME_BYTE_SIZE);
+    if (!snapshot_buf) {
+        ei_printf("ERR: Failed to allocate snapshot buffer!\n");
+        return;
+    }
+    
+    if (!ei_camera_capture(EI_CLASSIFIER_INPUT_WIDTH, EI_CLASSIFIER_INPUT_HEIGHT, snapshot_buf)) {
+        ei_printf("Failed to capture image\r\n");
+        free(snapshot_buf);
+        return;
+    }
+    
+    ei_impulse_result_t result = { 0 };
+    EI_IMPULSE_ERROR err = run_classifier(&signal, &result, debug_nn);
+    if (err != EI_IMPULSE_OK) {
+        ei_printf("ERR: Failed to run classifier (%d)\n", err);
+        return;
+    }
+    
+    for (uint16_t i = 0; i < EI_CLASSIFIER_LABEL_COUNT; i++) {
+        ei_printf("  %s: %.5f\r\n", ei_classifier_inferencing_categories[i], result.classification[i].value);
+    }
+    free(snapshot_buf);
+}
+```
+
+### **6. Results**
+When an object is placed in front of the ESP32-S3 camera, the model successfully classifies it:
+
+#### **6.1 Example Output (Bottle Detected)**
+```
+Bottle: 0.9976
+Phone: 0.0036
+```
+
+#### **6.2 Example Output (Phone Detected)**
+```
+Bottle: 0.0034
+Phone: 0.9985
+```
+
+### **7. Conclusion**
+This implementation successfully demonstrates real-time object classification on an ESP32-S3 using Edge Impulse. The model shows high accuracy and fast inference speed, making it ideal for edge AI applications. Future improvements can include expanding the dataset and further optimizing the inference process for better performance.
+
