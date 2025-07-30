@@ -6,7 +6,7 @@
 //
 
 #include <Arduino.h>
-#ifdef ESP32
+#if defined(ESP32) || defined(LIBRETINY)
 #include <AsyncTCP.h>
 #include <WiFi.h>
 #elif defined(ESP8266)
@@ -91,7 +91,7 @@ static volatile size_t requests = 0;
 void setup() {
   Serial.begin(115200);
 
-#ifndef CONFIG_IDF_TARGET_ESP32H2
+#if SOC_WIFI_SUPPORTED || CONFIG_ESP_WIFI_REMOTE_ENABLED || LT_ARD_HAS_WIFI
   WiFi.mode(WIFI_AP);
   WiFi.softAP("esp-captive");
 #endif
@@ -103,7 +103,7 @@ void setup() {
   // curl -v -X POST -H "Content-Type: application/json" -d '{"game": "test"}' http://192.168.4.1/delay
   //
   server.onNotFound([](AsyncWebServerRequest *request) {
-    requests++;
+    requests = requests + 1;
     if (request->url() == "/delay") {
       request->send(200, "application/json", "{\"status\":\"OK\"}");
     } else {
@@ -125,7 +125,7 @@ void setup() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     // need to cast to uint8_t*
     // if you do not, the const char* will be copied in a temporary String buffer
-    requests++;
+    requests = requests + 1;
     request->send(200, "text/html", (uint8_t *)htmlContent, htmlContentLength);
   });
 
@@ -143,7 +143,7 @@ void setup() {
   // time curl -N -v -G -d 'd=2000' -d 'l=10000'  http://192.168.4.1/slow.html --output -
   //
   server.on("/slow.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-    requests++;
+    requests = requests + 1;
     uint32_t d = request->getParam("d")->value().toInt();
     uint32_t l = request->getParam("l")->value().toInt();
     Serial.printf("d = %" PRIu32 ", l = %" PRIu32 "\n", d, l);

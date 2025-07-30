@@ -10,7 +10,7 @@ extern "C" {
 /** Major version number (X.x.x) */
 #define ASYNCTCP_VERSION_MAJOR 3
 /** Minor version number (x.X.x) */
-#define ASYNCTCP_VERSION_MINOR 3
+#define ASYNCTCP_VERSION_MINOR 4
 /** Patch version number (x.x.X) */
 #define ASYNCTCP_VERSION_PATCH 5
 

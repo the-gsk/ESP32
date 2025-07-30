@@ -6,7 +6,7 @@
 //
 
 #include <Arduino.h>
-#ifdef ESP32
+#if defined(ESP32) || defined(LIBRETINY)
 #include <AsyncTCP.h>
 #include <WiFi.h>
 #elif defined(ESP8266)
@@ -87,7 +87,7 @@ static const size_t htmlContentLength = strlen_P(htmlContent);
 void setup() {
   Serial.begin(115200);
 
-#ifndef CONFIG_IDF_TARGET_ESP32H2
+#if SOC_WIFI_SUPPORTED || CONFIG_ESP_WIFI_REMOTE_ENABLED || LT_ARD_HAS_WIFI
   WiFi.mode(WIFI_AP);
   WiFi.softAP("esp-captive");
 #endif
@@ -105,6 +105,22 @@ void setup() {
     f.close();
   }
 
+  LittleFS.mkdir("/files");
+
+  {
+    File f = LittleFS.open("/files/a.txt", "w");
+    assert(f);
+    f.print("Hello from a.txt");
+    f.close();
+  }
+
+  {
+    File f = LittleFS.open("/files/b.txt", "w");
+    assert(f);
+    f.print("Hello from b.txt");
+    f.close();
+  }
+
   // curl -v http://192.168.4.1/
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->redirect("/index.html");
@@ -112,6 +128,12 @@ void setup() {
 
   // curl -v http://192.168.4.1/index.html
   server.serveStatic("/index.html", LittleFS, "/index.html");
+
+  // Example to serve a directory content
+  // curl -v http://192.168.4.1/base/ => serves a.txt
+  // curl -v http://192.168.4.1/base/a.txt => serves a.txt
+  // curl -v http://192.168.4.1/base/b.txt => serves b.txt
+  server.serveStatic("/base", LittleFS, "/files").setDefaultFile("a.txt");
 
   server.begin();
 }

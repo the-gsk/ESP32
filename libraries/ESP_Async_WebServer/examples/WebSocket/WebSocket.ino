@@ -6,7 +6,7 @@
 //
 
 #include <Arduino.h>
-#ifdef ESP32
+#if defined(ESP32) || defined(LIBRETINY)
 #include <AsyncTCP.h>
 #include <WiFi.h>
 #elif defined(ESP8266)
@@ -25,7 +25,7 @@ static AsyncWebSocket ws("/ws");
 void setup() {
   Serial.begin(115200);
 
-#ifndef CONFIG_IDF_TARGET_ESP32H2
+#if SOC_WIFI_SUPPORTED || CONFIG_ESP_WIFI_REMOTE_ENABLED || LT_ARD_HAS_WIFI
   WiFi.mode(WIFI_AP);
   WiFi.softAP("esp-captive");
 #endif
@@ -102,8 +102,10 @@ void loop() {
   }
 
   if (now - lastHeap >= 2000) {
-    // cleanup disconnected clients or too many clients
-    ws.cleanupClients();
+    Serial.printf("Connected clients: %u / %u total\n", ws.count(), ws.getClients().size());
+
+    // this can be called to also set a soft limit on the number of connected clients
+    ws.cleanupClients(2);  // no more than 2 clients
 
 #ifdef ESP32
     Serial.printf("Free heap: %" PRIu32 "\n", ESP.getFreeHeap());
